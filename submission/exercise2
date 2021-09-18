@@ -1,0 +1,32 @@
+Kitties Pallet Design
+
+* Calls
+    - fn create_kitty
+    - fn sell_kitty
+    - fn buy_kitty
+
+
+* Types
+    - struct Kitty
+        * id: u32
+        * dna: u128
+    - struct KittyForSale
+        * id: u32
+        * kitty: Kitty
+        * price: Price
+        * current_owner: AccountId
+
+
+* Storages
+    - Kitties: double_map AccountId, u32 => Option<Kitty>
+    - NextAvailableKittyId: u32
+
+
+* Events
+    - KittyCreated
+        - owner: AccountId
+        - kitty: Kitty
+    - KittySold
+        - old_owner: AccountId
+        - new_owner: AccountId
+        - kitty: Kitty
