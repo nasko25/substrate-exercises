@@ -9,7 +9,7 @@ Kitties Pallet Design
 * Types
     - struct Kitty
         * id: u32
-        * dna: u128
+        * dna: ([u8, 16])   - ([u8, 16]) is an array of 16 8-bit unsigned integers
     - struct KittyForSale
         * id: u32
         * kitty: Kitty
