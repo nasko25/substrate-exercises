@@ -31,8 +31,6 @@ jobs:
         default: true
     - name: Install Wasm toolchain
       run: rustup target add wasm32-unknown-unknown
-    - name: Clear rust cache
-      run: cargo clean -p node-template
     - name: Run tests
       run: cargo test --all
     - name: Run benchmark tests
