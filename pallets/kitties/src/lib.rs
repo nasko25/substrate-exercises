@@ -56,8 +56,10 @@ pub mod pallet {
 		pub fn create(origin: OriginFor<T>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-			// TODO: ensure kitty id does not overflow
-			// return Err(ArithmeticError::Overflow.into());
+			// ensure kitty id does not overflow
+            if Self::next_kitty_id().overflowing_add(1).1 {
+			    return Err(ArithmeticError::Overflow.into());
+            }
 
 			// NOTE: NOT a cryptographically secure random number!
 			// Generate a random 128bit value

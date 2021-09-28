@@ -1,0 +1,6 @@
+NOTE on rust version: because of prost-derive v0.7.0 , the rust toolchain cannot compile.
+    Either try updating the prost-derive dependency, or install an older version of rust nightly:
+
+    rustup override set nightly-2021-07-28
+    rustup target add wasm32-unknown-unknown --toolchain nightly-2021-07-28
+
