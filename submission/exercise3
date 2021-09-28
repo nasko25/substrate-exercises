@@ -1,0 +1,11 @@
+Kitties Breed Pallet Design
+
+Kitty breed pallet:
+    if last dna digit is even -> male kitty
+    else                      -> female kitty
+
+Breed ->
+    check genders of parents
+    either put the parents DNAs where the new kitty’s DNA is generated
+                OR
+    split the new kitty’s DNA in two parts: the first will be composed of an xor of the parent’s DNAs (or some combination of the two parents’ DNAs) and the last 64 bits will be random
