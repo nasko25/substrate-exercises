@@ -7,6 +7,8 @@ network:
   endpoint: wss://polkadot.api.onfinality.io/public-ws    # this endpoint determines the blockchain subquery will query from
   # endpoint: wss://kusama.api.onfinality.io/public-ws    # this is the kusama endpoint
   dictionary: https://api.subquery.network/sq/subquery/dictionary-polkadot
+  # Dictionaries are useful when not all data from all blocks needs to be indexed.
+  # For more information: https://doc.subquery.network/tutorials_examples/dictionary/#
 dataSources:
   - name: main
     kind: substrate/Runtime

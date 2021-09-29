@@ -17,6 +17,7 @@ export async function handleBlock(block: SubstrateBlock): Promise<void> {
 
 // this demo focuses on the events handler, so the other two can be commented out
 export async function handleEvent(event: SubstrateEvent): Promise<void> {
+/*
     const {event: {data: [account, balance]}} = event;
     //Retrieve the record by its ID
     const record = await Transfer.get(event.extrinsic.block.block.header.hash.toString());
@@ -24,6 +25,24 @@ export async function handleEvent(event: SubstrateEvent): Promise<void> {
     //Big integer type Balance of a transfer event
     record.field3 = (balance as Balance).toBigInt();
     await record.save();
+*/
+
+    // the data list has the following variables:
+    // [from, to, value]
+    const _from = event.event.data[0];
+    const _to = event.event.data[1];
+    const _amount = event.event.data[2];
+
+    const transfer = new Transfer(
+        `${event.block.block.header.number.toNumber()}-${event.idx}`,   // block_number-id
+    );
+
+    transfer.blockNumber = event.block.block.header.number.toBigInt();
+    transfer.from = _from.toString();
+    transfer.to = _to.toString();
+    transfer.amount = (_amount as Balance).toBigInt();
+
+    await transfer.save();
 }
 
 /*
