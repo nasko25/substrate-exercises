@@ -1,0 +1,8 @@
+type Transfer @entity {
+
+  id: ID! #id is a required field
+  amount: BigInt
+  blockNumber: BigInt
+  to: String!   # ! means it is mandatory
+  from: String!
+}

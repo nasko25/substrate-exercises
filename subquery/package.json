@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@subql/cli": "^0.12.0"
+  }
+}

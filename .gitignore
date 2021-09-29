@@ -17,3 +17,6 @@
 
 # vim swp files
 *.swp
+
+# nodejs modules
+node_modules/
