@@ -9,3 +9,14 @@ Breed ->
     either put the parents DNAs where the new kitty’s DNA is generated
                 OR
     split the new kitty’s DNA in two parts: the first will be composed of an xor of the parent’s DNAs (or some combination of the two parents’ DNAs) and the last 64 bits will be random
+
+
+- Call
+    * breed
+        - kitty_id_1: u32
+        - kitty_id_2: u32
+- Event
+    * KittyBred
+        - owner: AccountId
+        - kitty_id: u32
+        - kitty: Kitty
