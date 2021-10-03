@@ -12,6 +12,9 @@ use sp_std::result::Result;
 
 pub use pallet::*;
 
+// only include the tests module for the "test" build
+#[cfg(test)]
+mod tests;
 
 // define an enum for the kitty gender
 #[derive(Encode, Decode, Clone, Copy, RuntimeDebug, PartialEq, Eq)]
@@ -86,6 +89,10 @@ pub mod pallet {
 		#[pallet::weight(1000)]
 		pub fn create(origin: OriginFor<T>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
+
+            // TODO refactor this method to use
+            // `Self::random_value` and `Self::get_next_kitty_id`
+            // to simplify the implementation
 
 			// ensure kitty id does not overflow
             if Self::next_kitty_id().overflowing_add(1).1 {
