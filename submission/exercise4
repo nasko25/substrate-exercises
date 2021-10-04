@@ -1,0 +1,15 @@
+Transfer Of Kitties Design
+
+- Call
+    * transfer
+        - owner: AccountId
+        - kitty_id: u32
+        - kitty: Kitty
+        - to: AccountId
+
+- Event
+    * KittyTransfer:
+        - from: AccountId
+        - to: AccountId
+        - kitty_id: u32
+        - kitty: Kitty
