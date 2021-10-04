@@ -90,33 +90,14 @@ pub mod pallet {
 		pub fn create(origin: OriginFor<T>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-            // TODO refactor this method to use
-            // `Self::random_value` and `Self::get_next_kitty_id`
-            // to simplify the implementation
-
 			// ensure kitty id does not overflow
-            if Self::next_kitty_id().overflowing_add(1).1 {
-			    return Err(ArithmeticError::Overflow.into());
-            }
+            let kitty_id = Self::get_next_kitty_id()?;
 
-			// NOTE: NOT a cryptographically secure random number!
-			// Generate a random 128bit value
-			let payload = (
-                // use N previous block hashes to generate a random number
-                // .1 will be a value showing when (after how many blocks) this number can be
-                // used securely
-				<pallet_randomness_collective_flip::Pallet<T> as Randomness<T::Hash, T::BlockNumber>>::random_seed().0,
-				&sender,
-				<frame_system::Pallet<T>>::extrinsic_index(),
-			);
-            // encode the (random) payload as a 128-bit value
-			let dna = payload.using_encoded(blake2_128);
+            let dna = Self::random_value(&sender);
 
 			// Create and store kitty
 			let kitty = Kitty(dna);
-			let kitty_id = Self::next_kitty_id();
-			Kitties::<T>::insert(&sender, kitty_id, kitty.clone());
-			NextKittyId::<T>::put(kitty_id + 1);
+			Kitties::<T>::insert(&sender, kitty_id, &kitty);
 
 			// Emit event
 			Self::deposit_event(Event::KittyCreated(sender, kitty_id, kitty));
@@ -170,9 +151,6 @@ pub mod pallet {
 }
 
 fn combine_dna(dna1: u8, dna2: u8, selector: u8) -> u8 {
-    // TODO finish
-
-    // for example
     // selector[bit_index] = 0 -> use dna1[bit_index]
     // selector[bit_index] = 1 -> use dna2[bit_index]
     //
@@ -181,7 +159,7 @@ fn combine_dna(dna1: u8, dna2: u8, selector: u8) -> u8 {
     // dna2     = 0b00001111
     // result   = 0b10101011
 
-    0
+    (!selector & dna1) | (selector & dna2)
 }
 
 impl<T: Config> Pallet<T> {
@@ -201,7 +179,17 @@ impl<T: Config> Pallet<T> {
     }
 
     fn random_value(sender: &T::AccountId) -> [u8; 16] {
-        // TODO finish
-        Default::default()
+        // NOTE: NOT a cryptographically secure random number!
+        // Generate a random 128bit value
+        let payload = (
+            // use N previous block hashes to generate a random number
+            // .1 will be a value showing when (after how many blocks) this number can be
+            // used securely
+            <pallet_randomness_collective_flip::Pallet<T> as Randomness<T::Hash, T::BlockNumber>>::random_seed().0,
+            &sender,
+            <frame_system::Pallet<T>>::extrinsic_index(),
+        );
+        // encode the (random) payload as a 128-bit value and return it
+        payload.using_encoded(blake2_128)
     }
 }

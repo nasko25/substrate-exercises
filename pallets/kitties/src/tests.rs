@@ -126,7 +126,6 @@ fn can_breed() {
 
         let kitty = Kitty([59, 254, 219, 122, 245, 239, 191, 125, 255, 239, 247, 247, 251, 239, 247, 254]);
 
-        println!("{:?}\n{:?}\n{:?}", KittiesModule::kitties(100, 0), KittiesModule::kitties(100, 1), KittiesModule::kitties(100, 2));
         assert_eq!(KittiesModule::kitties(100, 2), Some(kitty.clone()));
         assert_eq!(KittiesModule::next_kitty_id(), 3);
 
