@@ -20,7 +20,6 @@ frame_support::construct_runtime!(
     {
         // the three pallets included in the Test runtime
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},    // System pallet - always a requirement
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},  // to provide randomness
         KittiesModule: kitties::{Pallet, Call, Storage, Event<T>},          // the kitties pallet
     }
 );
@@ -64,11 +63,22 @@ impl frame_system::Config for Test {
 // parameter types for the randomness collective pallet
 impl pallet_randomness_collective_flip::Config for Test {}
 
+// create a static global variable that can be used by the unit tests
+parameter_types! {
+    pub static MockRandom: H256 = Default::default();
+}
+
+impl Randomness<H256, u64> for MockRandom {
+    fn random(_subject: &[u8]) -> (H256, u64) {
+        (MockRandom::get(), 0)
+    }
+}
 
 // --------------------------------------
 // parameter types for the kitties pallet
 impl Config for Test {
     type Event = Event;
+    type Randomness = MockRandom;
 }
 
 // construct the runtime for the unit tests

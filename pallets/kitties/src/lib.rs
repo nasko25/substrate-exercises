@@ -43,8 +43,9 @@ pub mod pallet {
     use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_randomness_collective_flip::Config {
+	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type Randomness: Randomness<Self::Hash, Self::BlockNumber>
 	}
 
 	/// Stores all the kitties. Key is (user, kitty_id).
@@ -185,7 +186,7 @@ impl<T: Config> Pallet<T> {
             // use N previous block hashes to generate a random number
             // .1 will be a value showing when (after how many blocks) this number can be
             // used securely
-            <pallet_randomness_collective_flip::Pallet<T> as Randomness<T::Hash, T::BlockNumber>>::random_seed().0,
+            T::Randomness::random_seed().0,
             &sender,
             <frame_system::Pallet<T>>::extrinsic_index(),
         );
