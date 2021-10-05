@@ -77,6 +77,7 @@ impl Randomness<H256, u64> for MockRandom {
 impl Config for Test {
     type Event = Event;
     type Randomness = MockRandom;
+    type KittyIndex = u32;
 }
 
 // construct the runtime for the unit tests

@@ -6,7 +6,7 @@ use frame_support::{
 	traits::Randomness,
 };
 use frame_system::pallet_prelude::*;
-use sp_runtime::ArithmeticError;
+use sp_runtime::{ArithmeticError, traits::{AtLeast32BitUnsigned, Bounded, One, CheckedAdd}};
 use sp_io::hashing::blake2_128;
 use sp_std::result::Result;
 
@@ -46,6 +46,7 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
+        type KittyIndex: Parameter + AtLeast32BitUnsigned + Bounded + Default  + Copy;
 	}
 
 	/// Stores all the kitties. Key is (user, kitty_id).
@@ -54,23 +55,23 @@ pub mod pallet {
 	pub type Kitties<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat, T::AccountId, // user
-		Blake2_128Concat, u32,  // kitty id
+		Blake2_128Concat, T::KittyIndex,  // kitty id
 		Kitty, OptionQuery
 	>;
 
 	/// Stores the next kitty Id.
 	#[pallet::storage]
 	#[pallet::getter(fn next_kitty_id)]
-	pub type NextKittyId<T: Config> = StorageValue<_, u32, ValueQuery>;
+	pub type NextKittyId<T: Config> = StorageValue<_, T::KittyIndex, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	#[pallet::metadata(T::AccountId = "AccountId")]
+	#[pallet::metadata(T::AccountId = "AccountId", T::KittyIndex = "KittyIndex")]
 	pub enum Event<T: Config> {
 		/// A kitty is created. \[owner, kitty_id, kitty\]
-		KittyCreated(T::AccountId, u32, Kitty),
+		KittyCreated(T::AccountId, T::KittyIndex, Kitty),
         /// A new kitten is bred. \[owner, kitty_id, kitty\]
-        KittyBred(T::AccountId, u32, Kitty),
+        KittyBred(T::AccountId, T::KittyIndex, Kitty),
 	}
 
     #[pallet::error]
@@ -108,7 +109,7 @@ pub mod pallet {
 
         /// Breed kitties
         #[pallet::weight(1000)]
-        pub fn breed(origin: OriginFor<T>, kitty_id_1: u32, kitty_id_2: u32) -> DispatchResult {
+        pub fn breed(origin: OriginFor<T>, kitty_id_1: T::KittyIndex, kitty_id_2: T::KittyIndex) -> DispatchResult {
             // get the sender
             let sender = ensure_signed(origin)?;
 
@@ -166,14 +167,14 @@ fn combine_dna(dna1: u8, dna2: u8, selector: u8) -> u8 {
 impl<T: Config> Pallet<T> {
     // get the next kitty id and update NextKittyId
     // returns an error if there is no kitty id available
-    fn get_next_kitty_id() -> Result<u32, DispatchError> {
+    fn get_next_kitty_id() -> Result<T::KittyIndex, DispatchError> {
         // try to add 1 to the kitty id
         // return error if an overflow happens
-        NextKittyId::<T>::try_mutate(|next_id| -> Result<u32, DispatchError> {
+        NextKittyId::<T>::try_mutate(|next_id| -> Result<T::KittyIndex, DispatchError> {
             // get the current id
             let current_id = *next_id;
             // safe uodate the current id by adding 1
-            *next_id = next_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+            *next_id = next_id.checked_add(&One::one()).ok_or(ArithmeticError::Overflow)?;
             // return the current id (before the update)
             Ok(current_id)
         })
