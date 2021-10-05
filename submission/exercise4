@@ -2,14 +2,11 @@ Transfer Of Kitties Design
 
 - Call
     * transfer
-        - owner: AccountId
-        - kitty_id: u32
-        - kitty: Kitty
+        - kitty_id: KittyIndex
         - to: AccountId
 
 - Event
-    * KittyTransfer:
+    * KittyTransferred:
         - from: AccountId
         - to: AccountId
-        - kitty_id: u32
-        - kitty: Kitty
+        - kitty_id: KittyIndex

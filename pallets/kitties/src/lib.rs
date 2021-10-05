@@ -72,6 +72,8 @@ pub mod pallet {
 		KittyCreated(T::AccountId, T::KittyIndex, Kitty),
         /// A new kitten is bred. \[owner, kitty_id, kitty\]
         KittyBred(T::AccountId, T::KittyIndex, Kitty),
+        /// A kitty is transferred. \[from, to, kitty_id\]
+        KittyTransferred(T::AccountId, T::AccountId, T::KittyIndex),
 	}
 
     #[pallet::error]
@@ -148,6 +150,35 @@ pub mod pallet {
             Self::deposit_event(Event::KittyBred(sender, kitty_id, new_kitty));
 
             Ok(())
+        }
+
+        /// Transfer a kitty to a new owner
+        #[pallet::weight(1000)]
+        pub fn transfer(origin: OriginFor<T>, to: T::AccountId, kitty_id: T::KittyIndex) -> DispatchResult {
+            let sender = ensure_signed(origin)?;
+
+            // if this fails, the mutation will not be applied
+            Kitties::<T>::try_mutate_exists(sender.clone(), kitty_id, |kitty| -> DispatchResult {
+                // sending a kitty you own to yourself does nothing
+                if sender == to {
+                    // if the kitty does not exist, or it does not belong to this sender,
+                    // throw an error
+                    ensure!(kitty.is_some(), Error::<T>::InvalidKittyId);
+                    // otherwise no need to do anything
+                    return Ok(());
+                }
+
+                // take the kitty out of the Option<Kitty> and make it None
+                // unless the kitty is none, in which case return an error
+                let kitty = kitty.take().ok_or(Error::<T>::InvalidKittyId)?;
+
+                // add the kitty with the new owner to the list
+                Kitties::<T>::insert(&to, kitty_id, kitty);
+
+                Self::deposit_event(Event::KittyTransferred(sender, to, kitty_id));
+
+                Ok(())
+            })
         }
 	}
 }
