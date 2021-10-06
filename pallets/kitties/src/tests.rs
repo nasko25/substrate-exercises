@@ -141,3 +141,36 @@ fn can_breed() {
         System::assert_last_event(Event::KittiesModule(crate::Event::<Test>::KittyBred(100u64, 2u32, kitty)));
     });
 }
+
+#[test]
+fn can_transfer() {
+    new_test_ext().execute_with(|| {
+        // create a kitty
+        assert_ok!(KittiesModule::create(Origin::signed(100)));
+        const KITTY: Kitty = Kitty([59, 250, 138, 82, 209, 39, 141, 109, 163, 238, 183, 145, 235, 168, 18, 122]);
+
+        // account 100 should have the kitty with id 0
+        assert_eq!(KittiesModule::kitties(100, 0), Some(KITTY));
+
+        // no one other than the owner should be able to transfer that kitty
+        assert_noop!(KittiesModule::transfer(Origin::signed(101), 102, 0), Error::<Test>::InvalidKittyId);
+
+        // account 0 should still have the kitty with id 0
+        assert_eq!(KittiesModule::kitties(100, 0), Some(KITTY));
+
+        // transfer the kitty to a new owner
+        assert_ok!(KittiesModule::transfer(Origin::signed(100), 103, 0));
+
+        // now past owner can no longer transfer that kitty
+        assert_noop!(KittiesModule::transfer(Origin::signed(100), 103, 0), Error::<Test>::InvalidKittyId);
+
+        // account 103 should now have the kitty with id 0
+        assert_eq!(KittiesModule::kitties(103, 0), Some(KITTY));
+        // and account 0 should no longer have kitty 0
+        assert_eq!(KittiesModule::kitties(100, 0), None);
+        assert_eq!(Kitties::<Test>::contains_key(100, 0), false);
+
+        // the last event on the blockchain should be kitty transfer
+        System::assert_last_event(Event::KittiesModule(crate::Event::<Test>::KittyTransferred(100, 103, 0)));
+    });
+}
