@@ -131,4 +131,5 @@ fn test_compact() {
     //                                                  - the other bits are the number
     assert_encode(Compact(1u64 << 14), &[0b00000010, 0b00000000, 0b00000001, 0b00000000]);
     assert_encode(Compact(1u128 << 14), &[0b00000010, 0b00000000, 0b00000001, 0b00000000]);
+    assert_encode(Compact(1u32 << 14), &[0b00000010, 0b00000000, 0b00000001, 0b00000000]);
 }
