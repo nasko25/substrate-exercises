@@ -1,0 +1,17 @@
+Kitty Exchange Feature Design
+
+- Types
+    * struct Price
+        - price: f64
+
+- Call
+    * set_price
+        - kitty_id: KittyIndex
+        - price: Price
+    * get_price
+        - kitty_id: KittyIndex
+    * buy_kitty
+        - kitty_id: KittyIndex
+
+- Storage
+    * KittiesForSale: map KittyIndex => Option<Price>
