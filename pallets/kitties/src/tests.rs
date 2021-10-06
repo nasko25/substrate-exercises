@@ -174,3 +174,28 @@ fn can_transfer() {
         System::assert_last_event(Event::KittiesModule(crate::Event::<Test>::KittyTransferred(100, 103, 0)));
     });
 }
+
+#[test]
+fn handle_self_transfer() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(KittiesModule::create(Origin::signed(100)));
+
+        // reset the events state to ensure that no events were transmitted
+        // after the creation of the kitty
+        System::reset_events();
+
+        // user should not be able to transfer kitties they don't own
+        assert_noop!(KittiesModule::transfer(Origin::signed(100), 100, 10), Error::<Test>::InvalidKittyId);
+
+        // tranferring a kitty you own to yourself should do nothing
+        assert_ok!(KittiesModule::transfer(Origin::signed(100), 100, 0));
+
+        const KITTY: Kitty = Kitty([59, 250, 138, 82, 209, 39, 141, 109, 163, 238, 183, 145, 235, 168, 18, 122]);
+
+        assert_eq!(KittiesModule::kitties(100, 0), Some(KITTY));
+
+        // there should be no event after the system event reset, because no transfer
+        // should have been executed
+        assert_eq!(System::events().len(), 0);
+    });
+}
