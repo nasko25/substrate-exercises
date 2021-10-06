@@ -77,7 +77,7 @@ fn test_codec() {
 
     // more advanced data structures
     assert_encode(Vec::<u8>::new(), b"\0");
-    assert_encode(vec![1u32, 2u32], b"\x08\x01\0\0\0\x02\0\0\0");   // 0x08 indicate that the size is 2; it is encoded using the Compact encoding (2 * 0x04 bytes)
+    assert_encode(vec![1u32, 2u32], b"\x08\x01\0\0\0\x02\0\0\0");   // 0x08 indicate that the size is 2; it is encoded using the Compact encoding
 }
 
 // copied from the SCALE codec
@@ -90,3 +90,45 @@ fn test_codec() {
 
 // Note: we use *LOW BITS* of the LSB in LE encoding to encode the 2 bit key.
 
+#[test]
+fn test_compact() {
+    //                                    00 => from 0 .. 2**6 -> the first compact encoding
+    // => the size is 1 byte
+    //                              000001   => the actual payload = 1
+    assert_encode(Compact(1u8), &[0b00000100]); // 0b100 is 4 in decimal
+    // so 2 is 0x08 (0b1000)
+
+    // no matter the size of the original data, the compact encoding of 1 is 4
+    assert_encode(Compact(1u64), &[0b00000100]);
+    assert_encode(Compact(1u128), &[0b00000100]);
+
+    // similarly up to 2^6=64
+    assert_encode(Compact(63u8), &[0b11111100]);
+    assert_encode(Compact(63u64), &[0b11111100]);
+    assert_encode(Compact(63u128), &[0b11111100]);
+
+    // for 64, the first format (2^6) is not enough, so the second encoding format is used (up to 2^14)
+    // 00000001 000000
+    //                                             01               - because of the format
+    //                                       000000                 - the last 6 bits
+    //                                                   00000001   - the first 8 bits (prepended
+    //                                                              with zeroes
+    assert_encode(Compact(0b01000000u8), &[0b00000001, 0b00000001]);
+    assert_encode(Compact(0b01000000u64), &[0b00000001, 0b00000001]);
+    assert_encode(Compact(0b01000000u128), &[0b00000001, 0b00000001]);
+
+    // 65 is encoded like 64
+    assert_encode(Compact(0b01000001u8), &[0b00000101, 0b00000001]);
+    assert_encode(Compact(0b01000001u64), &[0b00000101, 0b00000001]);
+    assert_encode(Compact(0b01000001u128), &[0b00000101, 0b00000001]);
+
+    // 2^14 - 1 (=16383) is encoded like 2^6
+    assert_encode(Compact((1u64 << 14) - 1), &[0b11111101, 0b11111111]);
+    assert_encode(Compact((1u128 << 14) - 1), &[0b11111101, 0b11111111]);
+
+    // for 2^14 (=16384) the next encoding format has to be used (the one using 4 bytes)
+    //                                           10     - part of the encoding
+    //                                                  - the other bits are the number
+    assert_encode(Compact(1u64 << 14), &[0b00000010, 0b00000000, 0b00000001, 0b00000000]);
+    assert_encode(Compact(1u128 << 14), &[0b00000010, 0b00000000, 0b00000001, 0b00000000]);
+}
