@@ -1,17 +1,26 @@
 Kitty Exchange Feature Design
 
-- Types
-    * struct Price
-        - price: f64
-
 - Call
     * set_price
+        - origin
         - kitty_id: KittyIndex
-        - price: Price
-    * get_price
-        - kitty_id: KittyIndex
+        - price: Option<Balance>
     * buy_kitty
+        - origin
         - kitty_id: KittyIndex
+        - owner: AccountId
+        - max_price: Balance    // to avoid a race condition where the price is changed after a buy trx is sent
 
 - Storage
-    * KittiesForSale: map KittyIndex => Option<Price>
+    * KittyPrices: map KittyIndex => Option<Balance>
+
+- Event
+    * KittyPriceUpdated
+        - owner: AccountId
+        - kitty_id: KittyIndex
+        - price: Option<Balance>
+    * KittySold
+        - old_owner: AccountId
+        - new_owner: AccountId
+        - kitty_id: KittyIndex
+        - price: Balance
