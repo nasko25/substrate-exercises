@@ -84,7 +84,7 @@ pub mod pallet {
         /// A kitty is transferred. \[from, to, kitty_id\]
         KittyTransferred(T::AccountId, T::AccountId, T::KittyIndex),
         /// The price for a kitty is updated. \[owner, kitty_id, price\]
-        KittyPriceUpdated(T::AccountId, KittyIndex, Option<T::Balance>),
+        KittyPriceUpdated(T::AccountId, T::KittyIndex, Option<T::Balance>),
 	}
 
     #[pallet::error]
