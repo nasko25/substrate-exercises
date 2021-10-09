@@ -43,11 +43,15 @@ pub mod pallet {
     use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_balances::Config {
+	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
         type KittyIndex: Parameter + AtLeast32BitUnsigned + Bounded + Default  + Copy;
+        // use "fungibles" pallet if working with multiple currencies
+        type Currency: Currency<Self::AccountId>;
 	}
+
+    pub type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	/// Stores all the kitties. Key is (user, kitty_id).
 	#[pallet::storage]
@@ -70,12 +74,12 @@ pub mod pallet {
     pub type KittyPrices<T: Config> = StorageMap<
         _,
         Blake2_128Concat, T::KittyIndex,
-        T::Balance, OptionQuery
+        BalanceOf<T>, OptionQuery
     >;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	#[pallet::metadata(T::AccountId = "AccountId", T::KittyIndex = "KittyIndex", Option<T::Balance> = "Option<Balance>", T::Balance = "Balance")]
+	#[pallet::metadata(T::AccountId = "AccountId", T::KittyIndex = "KittyIndex", Option<BalanceOf<T>> = "Option<Balance>", BalanceOf<T> = "Balance")]
 	pub enum Event<T: Config> {
 		/// A kitty is created. \[owner, kitty_id, kitty\]
 		KittyCreated(T::AccountId, T::KittyIndex, Kitty),
@@ -84,9 +88,9 @@ pub mod pallet {
         /// A kitty is transferred. \[from, to, kitty_id\]
         KittyTransferred(T::AccountId, T::AccountId, T::KittyIndex),
         /// The price for a kitty is updated. \[owner, kitty_id, price\]
-        KittyPriceUpdated(T::AccountId, T::KittyIndex, Option<T::Balance>),
+        KittyPriceUpdated(T::AccountId, T::KittyIndex, Option<BalanceOf<T>>),
         /// A kitty is sold. \[old_owner, new_owner, kitty_id, price\]
-        KittySold(T::AccountId, T::AccountId, T::KittyIndex, T::Balance),
+        KittySold(T::AccountId, T::AccountId, T::KittyIndex, BalanceOf<T>),
 	}
 
     #[pallet::error]
@@ -192,6 +196,10 @@ pub mod pallet {
                 // add the kitty with the new owner to the list
                 Kitties::<T>::insert(&to, kitty_id, kitty);
 
+                // remove the price of a kitty (if it was listed for sale) after transferring it
+                // to a new owner
+                KittyPrices::<T>::remove(kitty_id);
+
                 Self::deposit_event(Event::KittyTransferred(sender, to, kitty_id));
 
                 Ok(())
@@ -201,7 +209,7 @@ pub mod pallet {
         /// Set a price for a kitty for sale
         /// None to delist the kitty
         #[pallet::weight(1000)]
-        pub fn set_price(origin: OriginFor<T>, kitty_id: T::KittyIndex, new_price: Option<T::Balance>) -> DispatchResult {
+        pub fn set_price(origin: OriginFor<T>, kitty_id: T::KittyIndex, new_price: Option<BalanceOf<T>>) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
             // ensure the sender is the owner of the kitty id
@@ -220,7 +228,7 @@ pub mod pallet {
 
         /// Buy a kitty
         #[pallet::weight(1000)]
-        pub fn buy(origin: OriginFor<T>, owner: T::AccountId, kitty_id: T::KittyIndex, max_price: T::Balance) -> DispatchResult {
+        pub fn buy(origin: OriginFor<T>, owner: T::AccountId, kitty_id: T::KittyIndex, max_price: BalanceOf<T>) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
             // you should not be able to buy a kitty from yourself
@@ -246,7 +254,7 @@ pub mod pallet {
                     // send `price` from the sender to the owner of the kitty
                     //  ExistenceRequirement::KeepAlive will ensure that the transfer will not kill
                     //  the account of the sender if there is no more money left
-                    <pallet_balances::Pallet<T> as Currency<T::AccountId>>::transfer(&sender, &owner, price, ExistenceRequirement::KeepAlive)?;
+                    T::Currency::transfer(&sender, &owner, price, ExistenceRequirement::KeepAlive)?;
                     // NOTE: the money transfer above can be revertet (and it will be) if it fails, but the kitty transfer below
                     // cannot be reverted, so the money transfer need to happen first!
                     //  (so that if it fails, the kitty will be still with the original owner)

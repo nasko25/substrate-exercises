@@ -96,6 +96,7 @@ impl Config for Test {
     type Event = Event;
     type Randomness = MockRandom;
     type KittyIndex = u32;
+    type Currency = Balances;
 }
 
 // construct the runtime for the unit tests
