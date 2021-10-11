@@ -19,7 +19,7 @@ benchmarks! {
         let caller = whitelisted_caller();
 
         // mint the parent kitties
-        let mut kitty = Kitty(Deafult::default());
+        let mut kitty = Kitty(Default::default());
         let kitty_id = orml_nft::Pallet::<T>::mint(&caller, Pallet::<T>::class_id(), Vec::new(), kitty.clone())?;
 
         kitty.0[0] = 1;  // modify the kitty DNA, so one is a male and the other is a female
