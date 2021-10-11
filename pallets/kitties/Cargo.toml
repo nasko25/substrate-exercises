@@ -18,6 +18,9 @@ sp-std = {git = 'https://github.com/paritytech/substrate.git', branch = 'polkado
 # the 8f0d824fb33e6430282453e45c4a64b89dc5a44a commit is for the polkadot-v0.9.8 substrate branch
 orml-nft = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', rev = '8f0d824fb33e6430282453e45c4a64b89dc5a44a', default-features = false }
 
+# the frame-bemchmarking pallet is "optional" because it is only needed in the benchmarking build
+frame-benchmarking = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.8', default-features = false, optional = true }
+
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.8" }
 pallet-balances = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.8' }
@@ -26,11 +29,17 @@ pallet-balances = { git = 'https://github.com/paritytech/substrate.git', branch 
 default = ["std"]
 std = [
     "serde",
-	"codec/std",
-	"frame-support/std",
-	"frame-system/std",
-	"sp-io/std",
-	"sp-runtime/std",
+    "codec/std",
+    "frame-support/std",
+    "frame-system/std",
+    "sp-io/std",
+    "sp-runtime/std",
     "sp-std/std",
     "orml-nft/std",
+]
+
+runtime-benchmarks = [
+    "frame-benchmarking",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
 ]

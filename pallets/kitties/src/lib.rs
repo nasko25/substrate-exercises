@@ -18,6 +18,10 @@ pub use pallet::*;
 #[cfg(test)]
 mod tests;
 
+// only enabled when the "runtime-benchmarks" feature is enabled
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
+
 // define an enum for the kitty gender
 #[derive(Encode, Decode, Clone, Copy, RuntimeDebug, PartialEq, Eq)]
 pub enum KittyGender {
