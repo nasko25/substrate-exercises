@@ -21,7 +21,8 @@ frame_support::construct_runtime!(
         // the three pallets included in the Test runtime
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},    // System pallet - always a requirement
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},    // Balances pallet - used to deal with kitties' prices and exchanges
-        KittiesModule: kitties::{Pallet, Call, Storage, Event<T>},          // the kitties pallet
+        KittiesModule: kitties::{Pallet, Call, Storage, Event<T>, Config},          // the kitties pallet
+        Nft: orml_nft::{Pallet, Storage, Config<T>},
     }
 );
 
@@ -91,11 +92,26 @@ impl Randomness<H256, u64> for MockRandom {
 }
 
 // --------------------------------------
+// parameter types for the orml_nft pallet
+parameter_types! {
+    pub const MaxClassMetadata: u32 = 0;
+    pub const MaxTokenMetadata: u32 = 0;
+}
+
+impl orml_nft::Config for Test {
+    type ClassId = u32;
+    type TokenId = u32;
+    type ClassData = ();
+    type TokenData = Kitty;
+    type MaxClassMetadata = MaxClassMetadata;
+    type MaxTokenMetadata = MaxTokenMetadata;
+}
+
+// --------------------------------------
 // parameter types for the kitties pallet
 impl Config for Test {
     type Event = Event;
     type Randomness = MockRandom;
-    type KittyIndex = u32;
     type Currency = Balances;
 }
 
@@ -104,7 +120,17 @@ impl Config for Test {
 pub fn new_test_ext() -> sp_io::TestExternalities {
     // build new storage into the <Test> runtime
     // generate a genesis block for the Test runtime
-    let mut t: sp_io::TestExternalities = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
+    let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+    pallet_balances::GenesisConfig::<Test>{
+        balances: vec![(200, 500)],
+    }.assimilate_storage(&mut t).unwrap();
+
+    <crate::GenesisConfig as GenesisBuild<Test>>::assimilate_storage(&crate::GenesisConfig::default(), &mut t).unwrap();
+
+
+    let mut t: sp_io::TestExternalities = t.into();
+
     // set the block number to 1 in the newly created genesis state `t`
     // (events on block 0 are ignored, so in order to unit test events, the block number should not
     // be equal to 0)
@@ -122,8 +148,8 @@ fn can_create() {
 
         let kitty = Kitty([59, 250, 138, 82, 209, 39, 141, 109, 163, 238, 183, 145, 235, 168, 18, 122]);
 
-        assert_eq!(KittiesModule::kitties(100, 0), Some(kitty.clone()));
-        assert_eq!(KittiesModule::next_kitty_id(), 1);
+        assert_eq!(KittiesModule::kitties(&100, 0), Some(kitty.clone()));
+        assert_eq!(Nft::tokens(KittiesModule::class_id(), 0).unwrap().owner, 100);
 
         System::assert_last_event(Event::KittiesModule(crate::Event::<Test>::KittyCreated(100, 0, kitty)));
     });
@@ -154,8 +180,8 @@ fn can_breed() {
 
         let kitty = Kitty([187, 250, 235, 118, 211, 247, 237, 253, 187, 239, 191, 185, 239, 171, 211, 122]);
 
-        assert_eq!(KittiesModule::kitties(100, 2), Some(kitty.clone()));
-        assert_eq!(KittiesModule::next_kitty_id(), 3);
+        assert_eq!(KittiesModule::kitties(&100, 2), Some(kitty.clone()));
+        assert_eq!(Nft::tokens(KittiesModule::class_id(), 2).unwrap().owner, 100);
 
         System::assert_last_event(Event::KittiesModule(crate::Event::<Test>::KittyBred(100u64, 2u32, kitty)));
     });
@@ -166,28 +192,18 @@ fn can_transfer() {
     new_test_ext().execute_with(|| {
         // create a kitty
         assert_ok!(KittiesModule::create(Origin::signed(100)));
-        const KITTY: Kitty = Kitty([59, 250, 138, 82, 209, 39, 141, 109, 163, 238, 183, 145, 235, 168, 18, 122]);
-
-        // account 100 should have the kitty with id 0
-        assert_eq!(KittiesModule::kitties(100, 0), Some(KITTY));
 
         // no one other than the owner should be able to transfer that kitty
-        assert_noop!(KittiesModule::transfer(Origin::signed(101), 102, 0), Error::<Test>::InvalidKittyId);
-
-        // account 0 should still have the kitty with id 0
-        assert_eq!(KittiesModule::kitties(100, 0), Some(KITTY));
+        assert_noop!(KittiesModule::transfer(Origin::signed(101), 102, 0), orml_nft::Error::<Test>::NoPermission);
 
         // transfer the kitty to a new owner
         assert_ok!(KittiesModule::transfer(Origin::signed(100), 103, 0));
 
         // now past owner can no longer transfer that kitty
-        assert_noop!(KittiesModule::transfer(Origin::signed(100), 103, 0), Error::<Test>::InvalidKittyId);
+        assert_noop!(KittiesModule::transfer(Origin::signed(100), 103, 0), orml_nft::Error::<Test>::NoPermission);
 
         // account 103 should now have the kitty with id 0
-        assert_eq!(KittiesModule::kitties(103, 0), Some(KITTY));
-        // and account 0 should no longer have kitty 0
-        assert_eq!(KittiesModule::kitties(100, 0), None);
-        assert_eq!(Kitties::<Test>::contains_key(100, 0), false);
+        assert_eq!(Nft::tokens(KittiesModule::class_id(), 0).unwrap().owner, 103);
 
         // the last event on the blockchain should be kitty transfer
         System::assert_last_event(Event::KittiesModule(crate::Event::<Test>::KittyTransferred(100, 103, 0)));
@@ -204,14 +220,12 @@ fn handle_self_transfer() {
         System::reset_events();
 
         // user should not be able to transfer kitties they don't own
-        assert_noop!(KittiesModule::transfer(Origin::signed(100), 100, 10), Error::<Test>::InvalidKittyId);
+        assert_noop!(KittiesModule::transfer(Origin::signed(100), 100, 10), orml_nft::Error::<Test>::TokenNotFound);
 
         // tranferring a kitty you own to yourself should do nothing
         assert_ok!(KittiesModule::transfer(Origin::signed(100), 100, 0));
 
-        const KITTY: Kitty = Kitty([59, 250, 138, 82, 209, 39, 141, 109, 163, 238, 183, 145, 235, 168, 18, 122]);
-
-        assert_eq!(KittiesModule::kitties(100, 0), Some(KITTY));
+        assert_eq!(Nft::tokens(KittiesModule::class_id(), 0).unwrap().owner, 100);
 
         // there should be no event after the system event reset, because no transfer
         // should have been executed
