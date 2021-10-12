@@ -22,6 +22,10 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+mod weights;
+
+pub use weights::WeightInfo;
+
 // define an enum for the kitty gender
 #[derive(Encode, Decode, Clone, Copy, RuntimeDebug, PartialEq, Eq)]
 pub enum KittyGender {
@@ -55,6 +59,7 @@ pub mod pallet {
         type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
         // use "fungibles" pallet if working with multiple currencies
         type Currency: Currency<Self::AccountId>;
+        type WeightInfo: WeightInfo;
 	}
 
     pub type KittyIndexOf<T> = <T as orml_nft::Config>::TokenId;
@@ -124,7 +129,7 @@ pub mod pallet {
 	impl<T:Config> Pallet<T> {
 
 		/// Create a new kitty
-		#[pallet::weight(1000)]
+		#[pallet::weight(T::WeightInfo::create())]
 		pub fn create(origin: OriginFor<T>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -141,7 +146,7 @@ pub mod pallet {
 		}
 
         /// Breed kitties
-        #[pallet::weight(1000)]
+        #[pallet::weight(T::WeightInfo::breed())]
         pub fn breed(origin: OriginFor<T>, kitty_id_1: KittyIndexOf<T>, kitty_id_2: KittyIndexOf<T>) -> DispatchResult {
             // get the sender
             let sender = ensure_signed(origin)?;
@@ -182,7 +187,7 @@ pub mod pallet {
         }
 
         /// Transfer a kitty to a new owner
-        #[pallet::weight(1000)]
+        #[pallet::weight(T::WeightInfo::transfer())]
         pub fn transfer(origin: OriginFor<T>, to: T::AccountId, kitty_id: KittyIndexOf<T>) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
@@ -201,7 +206,7 @@ pub mod pallet {
 
         /// Set a price for a kitty for sale
         /// None to delist the kitty
-        #[pallet::weight(1000)]
+        #[pallet::weight(T::WeightInfo::set_price())]
         pub fn set_price(origin: OriginFor<T>, kitty_id: KittyIndexOf<T>, new_price: Option<BalanceOf<T>>) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
@@ -220,7 +225,7 @@ pub mod pallet {
         }
 
         /// Buy a kitty
-        #[pallet::weight(1000)]
+        #[pallet::weight(T::WeightInfo::buy())]
         #[transactional]
         pub fn buy(origin: OriginFor<T>, owner: T::AccountId, kitty_id: KittyIndexOf<T>, max_price: BalanceOf<T>) -> DispatchResult {
             let sender = ensure_signed(origin)?;

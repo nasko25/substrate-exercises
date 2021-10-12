@@ -113,6 +113,7 @@ impl Config for Test {
     type Event = Event;
     type Randomness = MockRandom;
     type Currency = Balances;
+    type WeightInfo = ();
 }
 
 // construct the runtime for the unit tests
