@@ -124,7 +124,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
     pallet_balances::GenesisConfig::<Test>{
-        balances: vec![(200, 500)],
+        // account with id 100 has a balance of 80
+        balances: vec![(100, 80)],
     }.assimilate_storage(&mut t).unwrap();
 
     <crate::GenesisConfig as GenesisBuild<Test>>::assimilate_storage(&crate::GenesisConfig::default(), &mut t).unwrap();
@@ -238,11 +239,10 @@ fn handle_self_transfer() {
     });
 }
 
-// TODO add tests for set_price() and buy()
 #[test]
 fn can_set_price() {
     new_test_ext().execute_with(|| {
-        // create a kitty for account wit id 100
+        // create a kitty for account with id 100
         // the newly created kitty will have id 0
         assert_ok!(KittiesModule::create(Origin::signed(100)));
 
@@ -269,5 +269,51 @@ fn can_set_price() {
 
         // a KittyPriceUpdated event should have been submitted after removing kitty 0's price
         System::assert_last_event(Event::KittiesModule(crate::Event::KittyPriceUpdated(100, 0, None)));
+    });
+}
+
+#[test]
+fn can_buy() {
+    new_test_ext().execute_with(|| {
+        // create a new kitty
+        assert_ok!(KittiesModule::create(Origin::signed(1000)));
+
+        // buying from account 1000 a kitty with id 1 for 200 should throw a NotForSale error
+        //  (because a kitty with that id does not exist)
+        assert_noop!(KittiesModule::buy(Origin::signed(100), 1000, 1, 200), Error::<Test>::NotForSale);
+        // it should not be possible to buy a kitty from oneself
+        assert_noop!(KittiesModule::buy(Origin::signed(1000), 1000, 0, 200), Error::<Test>::BuyFromSelf);
+        // kitty 0 is not yet for sale, so it cannot be bought
+        assert_noop!(KittiesModule::buy(Origin::signed(100), 1000, 0, 200), Error::<Test>::NotForSale);
+
+        // list the kitty for sale by setting its price
+        assert_ok!(KittiesModule::set_price(Origin::signed(1000), 0, Some(200)));
+
+        // it should not be possible to buy the kitty for a lower price
+        assert_noop!(KittiesModule::buy(Origin::signed(100), 1000, 0, 199), Error::<Test>::PriceTooLow);
+        // (even if the user has the money)
+        assert_noop!(KittiesModule::buy(Origin::signed(100), 1000, 0, 70), Error::<Test>::PriceTooLow);
+
+        // a user without enough money should not be able to buy the kitty either
+        assert_noop!(KittiesModule::buy(Origin::signed(100), 1000, 0, 200), pallet_balances::Error::<Test, _>::InsufficientBalance);
+
+        // owner should be able to set a new price
+        assert_ok!(KittiesModule::set_price(Origin::signed(1000), 0, Some(20)));
+
+        // now the buyer should have enough money
+        assert_ok!(KittiesModule::buy(Origin::signed(100), 1000, 0, 80));
+
+        // now the buyer should have payed only the original cost of the kitty
+        assert_eq!(Balances::free_balance(100), 80 - 20);
+        // and the seller should have the payed amount as a free balance
+        assert_eq!(Balances::free_balance(1000), 20);
+
+        // now after the transfer the kitty should no longer have a price
+        assert_eq!(KittyPrices::<Test>::contains_key(0), false);
+        // and the owner of the kitty with id 0 should be the buyer
+        assert_eq!(Nft::tokens(KittiesModule::class_id(), 0).unwrap().owner, 100);
+
+        // a KittySold event should have been submitted after selling the kitty
+        System::assert_last_event(Event::KittiesModule(crate::Event::KittySold(1000, 100, 0, 20)));
     });
 }
