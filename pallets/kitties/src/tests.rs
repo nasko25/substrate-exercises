@@ -193,6 +193,8 @@ fn can_transfer() {
     new_test_ext().execute_with(|| {
         // create a kitty
         assert_ok!(KittiesModule::create(Origin::signed(100)));
+        // set a price for the newly created kitty
+        assert_ok!(KittiesModule::set_price(Origin::signed(100), 0, Some(20)));
 
         // no one other than the owner should be able to transfer that kitty
         assert_noop!(KittiesModule::transfer(Origin::signed(101), 102, 0), orml_nft::Error::<Test>::NoPermission);
@@ -200,8 +202,10 @@ fn can_transfer() {
         // transfer the kitty to a new owner
         assert_ok!(KittiesModule::transfer(Origin::signed(100), 103, 0));
 
-        // now past owner can no longer transfer that kitty
+        // now the previous owner can no longer transfer that kitty
         assert_noop!(KittiesModule::transfer(Origin::signed(100), 103, 0), orml_nft::Error::<Test>::NoPermission);
+        // after the transfer the price of the kitty should be reset
+        assert_eq!(KittyPrices::<Test>::contains_key(0), false);
 
         // account 103 should now have the kitty with id 0
         assert_eq!(Nft::tokens(KittiesModule::class_id(), 0).unwrap().owner, 103);
