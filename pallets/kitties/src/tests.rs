@@ -234,4 +234,36 @@ fn handle_self_transfer() {
     });
 }
 
-// TODO add tests for set_price()
+// TODO add tests for set_price() and buy()
+#[test]
+fn can_set_price() {
+    new_test_ext().execute_with(|| {
+        // create a kitty for account wit id 100
+        // the newly created kitty will have id 0
+        assert_ok!(KittiesModule::create(Origin::signed(100)));
+
+        // account 101 should not be able to set the price for 100's kitty
+        assert_noop!(KittiesModule::set_price(Origin::signed(101), 0, Some(15)), Error::<Test>::NotOwner);
+
+        // account 100 should be able to set the price of its own kitty
+        assert_ok!(KittiesModule::set_price(Origin::signed(100), 0, Some(20)));
+
+        // a KittyPriceUpdated event should have been submitted after the price change
+        System::assert_last_event(Event::KittiesModule(crate::Event::KittyPriceUpdated(100, 0, Some(20))));
+
+        // kitty 0's price should be correctly set now
+        assert_eq!(KittiesModule::kitty_prices(0), Some(20));
+
+        // setting a kitty not for sale is the same as setting its price to None
+        assert_ok!(KittiesModule::set_price(Origin::signed(100), 0, None));
+
+        // now kitty 0 should no longer be for sale
+        assert_eq!(KittiesModule::kitty_prices(0), None);
+        // and KittyPrices should no longer have kitty 0's id
+        //  (as the kitty is no longer for sale and its price was set to None)
+        assert_eq!(KittyPrices::<Test>::contains_key(0), false);
+
+        // a KittyPriceUpdated event should have been submitted after removing kitty 0's price
+        System::assert_last_event(Event::KittiesModule(crate::Event::KittyPriceUpdated(100, 0, None)));
+    });
+}
