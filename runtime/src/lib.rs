@@ -274,11 +274,15 @@ impl pallet_template::Config for Runtime {
 	type Event = Event;
 }
 
+parameter_types! {
+    pub const DefaultDifficulty: u32 = 10;
+}
 impl pallet_kitties::Config for Runtime {
     type Event = Event;
     type Randomness = RandomnessCollectiveFlip;
     type Currency = Balances;
     type WeightInfo = weights::pallet_kitties::WeightInfo<Runtime>;
+    type DefaultDifficulty = DefaultDifficulty;
 }
 
 parameter_types! {
@@ -298,6 +302,14 @@ impl orml_nft::Config for Runtime {
     type MaxTokenMetadata = MaxTokenMetadata;
 }
 
+// define the types for SendTransaction
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+    where Call: From<C>, {
+        type OverarchingCall = Call;
+        type Extrinsic = UncheckedExtrinsic;
+    }
+
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -316,7 +328,7 @@ construct_runtime!(
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template::{Pallet, Call, Storage, Event<T>},
         // Substrate Kitties pallet
-        Kitties: pallet_kitties::{Pallet, Storage, Call, Event<T>, Config},
+        Kitties: pallet_kitties::{Pallet, Storage, Call, Event<T>, Config, ValidateUnsigned},   // ValidateUnsigned to let the runtime know that the pallet accepts unsigned transactions
         Nft: orml_nft::{Pallet, Storage, Config<T>},
 	}
 );

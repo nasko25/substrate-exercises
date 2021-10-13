@@ -4,7 +4,7 @@ use crate as kitties;
 use sp_core::H256;
 use frame_support::{parameter_types, assert_ok, assert_noop};
 use sp_runtime::{
-    traits::{BlakeTwo256, IdentityLookup}, testing::Header,
+    traits::{BlakeTwo256, IdentityLookup}, testing::Header, testing::TestXt,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -25,6 +25,17 @@ frame_support::construct_runtime!(
         Nft: orml_nft::{Pallet, Storage, Config<T>},
     }
 );
+
+/// An extrinsic mock type used for tests.
+pub type Extrinsic = TestXt<Call, ()>;
+
+impl<LocalCall> SendTransactionTypes<LocalCall> for Test
+where
+    Call: From<LocalCall>,
+{
+        type OverarchingCall = Call;
+        type Extrinsic = Extrinsic;
+}
 
 // -------------------------------------
 // parameter types for the system pallet
@@ -107,6 +118,10 @@ impl orml_nft::Config for Test {
     type MaxTokenMetadata = MaxTokenMetadata;
 }
 
+parameter_types! {
+    pub const DefaultDifficulty: u32 = 10;
+}
+
 // --------------------------------------
 // parameter types for the kitties pallet
 impl Config for Test {
@@ -114,6 +129,7 @@ impl Config for Test {
     type Randomness = MockRandom;
     type Currency = Balances;
     type WeightInfo = ();
+    type DefaultDifficulty = DefaultDifficulty;
 }
 
 // construct the runtime for the unit tests
